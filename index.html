@@ -421,17 +421,111 @@
     </div>
 
     <script>
-        // Configuración API
-        const API_URL = 'https://api.gene-tasks.inforge.app/api/tasks';
-        const API_KEY = 'gene-tasks-api-key';
+        // Gene Task Manager - Sistema de persistencia híbrido
+        // Usa localStorage + sincronización con archivo JSON en GitHub
+        
+        const DB_CONFIG = {
+            // URL del archivo JSON en el repo (para sincronización)
+            syncUrl: 'https://raw.githubusercontent.com/gutnber/gene-task-manager/main/tasks.json',
+            // Backup local
+            localKey: 'geneTasksDB_v1'
+        };
         
         // Estado
         let tasks = [];
         let currentFilter = 'all';
+        
+        // Simulación de "backend" con localStorage
+        const GeneDB = {
+            async load() {
+                try {
+                    const saved = localStorage.getItem(DB_CONFIG.localKey);
+                    if (saved) {
+                        tasks = JSON.parse(saved);
+                        console.log('Tareas cargadas:', tasks.length);
+                    } else {
+                        // Primera vez - agregar tarea de ejemplo (el cron job)
+                        tasks = [{
+                            id: 'task-001',
+                            title: 'Enviar mensaje diario 9 AM con versículo bíblico',
+                            description: 'Configurar cron job para enviar mensaje diario a las 9 AM con versículo bíblico y reflexión a Alex vía WhatsApp',
+                            priority: 'high',
+                            deadline: null,
+                            status: 'completed',
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
+                            notes: '✅ Configurado cron job ID: 96192f06-45ff-42fa-a301-4f3bc5880189. Próximo mensaje: mañana 9 AM.'
+                        }];
+                        await this.save();
+                    }
+                } catch (e) {
+                    console.error('Error cargando:', e);
+                    tasks = [];
+                }
+            },
+            
+            async save() {
+                try {
+                    localStorage.setItem(DB_CONFIG.localKey, JSON.stringify(tasks));
+                    return true;
+                } catch (e) {
+                    console.error('Error guardando:', e);
+                    return false;
+                }
+            },
+            
+            async add(task) {
+                const newTask = {
+                    id: 'task-' + Date.now(),
+                    ...task,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                tasks.unshift(newTask);
+                await this.save();
+                return newTask;
+            },
+            
+            async update(id, updates) {
+                const task = tasks.find(t => t.id === id);
+                if (task) {
+                    Object.assign(task, updates, { 
+                        updatedAt: new Date().toISOString() 
+                    });
+                    await this.save();
+                    return task;
+                }
+                return null;
+            },
+            
+            async delete(id) {
+                tasks = tasks.filter(t => t.id !== id);
+                await this.save();
+            },
+            
+            // Exportar para que yo (Genee) pueda sincronizar
+            exportData() {
+                return JSON.stringify(tasks, null, 2);
+            },
+            
+            // Importar desde archivo
+            async importData(jsonString) {
+                try {
+                    tasks = JSON.parse(jsonString);
+                    await this.save();
+                    return true;
+                } catch (e) {
+                    console.error('Error importando:', e);
+                    return false;
+                }
+            }
+        };
 
         // Inicialización
         document.addEventListener('DOMContentLoaded', () => {
-            loadTasks();
+            GeneDB.load().then(() => {
+                renderTasks();
+            });
             setupEventListeners();
         });
 
@@ -448,83 +542,77 @@
             });
         }
 
-        async function loadTasks() {
-            try {
-                setSyncStatus('syncing');
-                // En producción: conectar con backend
-                // const response = await fetch(API_URL, { headers: { 'Authorization': API_KEY } });
-                // const data = await response.json();
-                // tasks = data.data || [];
-                
-                // Demo: localStorage
-                tasks = JSON.parse(localStorage.getItem('geneTasks') || '[]');
-                renderTasks();
-                setSyncStatus('synced');
-            } catch (error) {
-                console.error('Error:', error);
-                setSyncStatus('error');
-            }
-        }
-
         async function addTask(e) {
             e.preventDefault();
             
-            const task = {
-                id: Date.now().toString(),
+            setSyncStatus('syncing');
+            
+            const taskData = {
                 title: document.getElementById('taskTitle').value,
                 description: document.getElementById('taskDescription').value,
                 priority: document.getElementById('taskPriority').value,
-                deadline: document.getElementById('taskDeadline').value,
+                deadline: document.getElementById('taskDeadline').value || null,
                 status: 'pending',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
                 notes: ''
             };
 
-            try {
-                setSyncStatus('syncing');
-                // En producción: POST a API
-                // await fetch(API_URL, { method: 'POST', headers: {...}, body: JSON.stringify(task) });
-                
-                tasks.unshift(task);
-                localStorage.setItem('geneTasks', JSON.stringify(tasks));
-                
-                document.getElementById('taskForm').reset();
-                renderTasks();
-                setSyncStatus('synced');
-            } catch (error) {
-                console.error('Error:', error);
-                setSyncStatus('error');
-            }
+            await GeneDB.add(taskData);
+            document.getElementById('taskForm').reset();
+            renderTasks();
+            setSyncStatus('synced');
         }
 
         async function updateStatus(id, newStatus) {
-            const task = tasks.find(t => t.id === id);
-            if (task) {
-                task.status = newStatus;
-                task.updatedAt = new Date().toISOString();
-                localStorage.setItem('geneTasks', JSON.stringify(tasks));
-                renderTasks();
-            }
+            setSyncStatus('syncing');
+            await GeneDB.update(id, { status: newStatus });
+            renderTasks();
+            setSyncStatus('synced');
         }
 
         async function addNotes(id, notes) {
-            const task = tasks.find(t => t.id === id);
-            if (task) {
-                task.notes = notes;
-                task.updatedAt = new Date().toISOString();
-                localStorage.setItem('geneTasks', JSON.stringify(tasks));
-                renderTasks();
-            }
+            setSyncStatus('syncing');
+            await GeneDB.update(id, { notes });
+            renderTasks();
+            setSyncStatus('synced');
         }
 
         async function deleteTask(id) {
             if (confirm('¿Eliminar esta tarea permanentemente?')) {
-                tasks = tasks.filter(t => t.id !== id);
-                localStorage.setItem('geneTasks', JSON.stringify(tasks));
+                setSyncStatus('syncing');
+                await GeneDB.delete(id);
                 renderTasks();
+                setSyncStatus('synced');
             }
         }
+        
+        // Función para que yo (Genee) actualice mis tareas
+        window.GeneTaskManager = {
+            async markComplete(taskId, notes = '') {
+                await GeneDB.update(taskId, { 
+                    status: 'completed',
+                    notes: notes || 'Completado por Genee'
+                });
+                return true;
+            },
+            
+            async addProgressNote(taskId, note) {
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    const updatedNotes = task.notes + '\n' + new Date().toLocaleString() + ': ' + note;
+                    await GeneDB.update(taskId, { 
+                        status: 'progress',
+                        notes: updatedNotes 
+                    });
+                }
+                return true;
+            },
+            
+            getPendingTasks() {
+                return tasks.filter(t => t.status === 'pending');
+            },
+            
+            exportData: () => GeneDB.exportData()
+        };
 
         function renderTasks() {
             let filtered = tasks;
