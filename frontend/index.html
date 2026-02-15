@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gene Task Manager - Inforge Connected</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+        }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; color: var(--text-primary); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 40px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px; }
+        .logo { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 10px; }
+        .logo i { font-size: 2.5rem; color: #00d4ff; }
+        h1 { font-size: 2.5rem; background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { color: #888; font-size: 1rem; }
+        .connection-status { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(0,0,0,0.3); border-radius: 20px; font-size: 0.85rem; margin-top: 10px; }
+        .connection-status.connected { color: #00ff88; }
+        .connection-status.error { color: #ff4444; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        .stat-card i { font-size: 2rem; margin-bottom: 10px; }
+        .stat-card.pending i { color: var(--warning); }
+        .stat-card.progress i { color: var(--info); }
+        .stat-card.completed i { color: var(--success); }
+        .stat-value { font-size: 2.5rem; font-weight: 700; color: #fff; }
+        .stat-label { color: #888; font-size: 0.9rem; }
+        .kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .kanban-column { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; min-height: 500px; border: 1px solid rgba(255,255,255,0.1); }
+        .column-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid rgba(255,255,255,0.1); }
+        .column-title { font-weight: 600; display: flex; align-items: center; gap: 10px; font-size: 1.1rem; }
+        .column-pending .column-title { color: var(--warning); }
+        .column-progress .column-title { color: var(--info); }
+        .column-completed .column-title { color: var(--success); }
+        .column-count { background: rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; color: #888; }
+        .task-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 15px; margin-bottom: 15px; transition: all 0.3s; }
+        .task-card:hover { border-color: rgba(0, 212, 255, 0.3); transform: translateY(-2px); }
+        .task-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .task-title { font-size: 1rem; font-weight: 600; color: #fff; line-height: 1.4; }
+        .task-priority { padding: 3px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; }
+        .priority-high { background: rgba(255, 0, 0, 0.2); color: #ff4444; }
+        .priority-medium { background: rgba(255, 165, 0, 0.2); color: #ffa500; }
+        .priority-low { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .task-description { color: #aaa; margin-bottom: 10px; font-size: 0.9rem; line-height: 1.5; }
+        .task-notes { background: rgba(0, 212, 255, 0.1); padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 0.85rem; color: #888; white-space: pre-line; border-left: 3px solid #00d4ff; }
+        .task-actions { display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap; }
+        .btn { padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; border: none; transition: all 0.3s; }
+        .btn-success { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; }
+        .btn-warning { background: rgba(255, 165, 0, 0.2); color: #ffa500; border: 1px solid #ffa500; }
+        .btn-danger { background: rgba(255, 0, 0, 0.2); color: #ff4444; border: 1px solid #ff4444; }
+        .btn-info { background: rgba(0, 212, 255, 0.2); color: #00d4ff; border: 1px solid #00d4ff; }
+        .task-form { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; margin-bottom: 30px; }
+        .form-title { color: #00d4ff; margin-bottom: 20px; font-size: 1.3rem; }
+        input, textarea, select { width: 100%; padding: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; color: #fff; margin-bottom: 15px; font-family: inherit; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #00d4ff; }
+        .btn-primary { padding: 15px 30px; background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; width: 100%; }
+        .loading { text-align: center; padding: 40px; color: #888; }
+        .error-message { background: rgba(239, 68, 68, 0.2); color: #ff4444; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #ff4444; }
+        @media (max-width: 968px) { .kanban-board { grid-template-columns: 1fr; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-robot"></i>
+                <h1>Gene Task Manager</h1>
+            </div>
+            <p class="subtitle">Gestión de tareas con persistencia Inforge</p>
+            <div class="connection-status" id="connectionStatus">
+                <i class="fas fa-circle"></i> <span>Conectando a Inforge...</span>
+            </div>
+        </header>
+
+        <div id="errorContainer"></div>
+
+        <div class="stats-grid">
+            <div class="stat-card pending">
+                <i class="fas fa-clock"></i>
+                <div class="stat-value" id="pendingCount">-</div>
+                <div class="stat-label">Pendientes</div>
+            </div>
+            <div class="stat-card progress">
+                <i class="fas fa-spinner"></i>
+                <div class="stat-value" id="progressCount">-</div>
+                <div class="stat-label">En Progreso</div>
+            </div>
+            <div class="stat-card completed">
+                <i class="fas fa-check-circle"></i>
+                <div class="stat-value" id="completedCount">-</div>
+                <div class="stat-label">Completadas</div>
+            </div>
+            <div class="stat-card total">
+                <i class="fas fa-tasks"></i>
+                <div class="stat-value" id="totalCount">-</div>
+                <div class="stat-label">Total</div>
+            </div>
+        </div>
+
+        <div class="task-form">
+            <h2 class="form-title"><i class="fas fa-plus-circle"></i> Nueva Tarea</h2>
+            <form id="taskForm">
+                <input type="text" id="taskTitle" placeholder="Título de la tarea" required>
+                <textarea id="taskDescription" placeholder="Descripción detallada..." rows="4" required></textarea>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <select id="taskPriority">
+                        <option value="high">Alta Prioridad</option>
+                        <option value="medium" selected>Media Prioridad</option>
+                        <option value="low">Baja Prioridad</option>
+                    </select>
+                    <input type="date" id="taskDeadline">
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-paper-plane"></i> Crear Tarea
+                </button>
+            </form>
+        </div>
+
+        <div class="kanban-board">
+            <div class="kanban-column column-pending">
+                <div class="column-header">
+                    <span class="column-title"><i class="fas fa-clock"></i> Pendientes</span>
+                    <span class="column-count" id="count-pending">0</span>
+                </div>
+                <div id="list-pending"><div class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</div></div>
+            </div>
+            <div class="kanban-column column-progress">
+                <div class="column-header">
+                    <span class="column-title"><i class="fas fa-spinner"></i> En Progreso</span>
+                    <span class="column-count" id="count-progress">0</span>
+                </div>
+                <div id="list-progress"><div class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</div></div>
+            </div>
+            <div class="kanban-column column-completed">
+                <div class="column-header">
+                    <span class="column-title"><i class="fas fa-check-circle"></i> Completadas</span>
+                    <span class="column-count" id="count-completed">0</span>
+                </div>
+                <div id="list-completed"><div class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Inforge API Configuration
+        const API_URL = 'https://y3jed7qb.us-west.insforge.app';
+        const API_KEY = 'ik_e9e6dfc89c2b2fdcff23a652ad0e6f7a';
+        
+        let tasks = [];
+        let isConnected = false;
+
+        // Check connection to Inforge
+        async function checkConnection() {
+            try {
+                const response = await fetch(`${API_URL}/health`, {
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+                if (response.ok) {
+                    isConnected = true;
+                    updateConnectionStatus(true);
+                    loadTasks();
+                } else {
+                    throw new Error('Health check failed');
+                }
+            } catch (error) {
+                console.error('Connection error:', error);
+                isConnected = false;
+                updateConnectionStatus(false);
+                showError('No se pudo conectar a Inforge. Usando modo local.');
+                // Fallback to localStorage
+                loadFromLocalStorage();
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.className = 'connection-status connected';
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> <span>Conectado a Inforge</span>';
+            } else {
+                statusEl.className = 'connection-status error';
+                statusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> <span>Sin conexión - Modo local</span>';
+            }
+        }
+
+        function showError(message) {
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${message}</div>`;
+        }
+
+        // Load tasks from Inforge
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_URL}/api/tasks`, {
+                    headers: { 
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // No tasks yet, that's ok
+                        tasks = [];
+                    } else {
+                        throw new Error('Failed to load tasks');
+                    }
+                } else {
+                    const data = await response.json();
+                    tasks = data.data || [];
+                }
+                
+                // If no tasks from server, seed with initial tasks
+                if (tasks.length === 0) {
+                    await seedInitialTasks();
+                }
+                
+                renderTasks();
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                loadFromLocalStorage();
+            }
+        }
+
+        // Seed initial tasks
+        async function seedInitialTasks() {
+            const initialTasks = [
+                {
+                    title: '🎨 Mejorar diseño visual con estilo Kanban',
+                    description: 'Implementar tablero Kanban con 3 columnas para mejor visualización de tareas',
+                    priority: 'high',
+                    status: 'completed',
+                    notes: '✅ Tablero Kanban implementado\n✅ Diseño moderno aplicado'
+                },
+                {
+                    title: '📊 Crear Plan de Negocios Serviclima El Muñoz',
+                    description: 'Plan completo con proyecciones financieras para inversionistas',
+                    priority: 'high',
+                    status: 'completed',
+                    notes: '✅ Plan creado\n✅ ROI 46.4% proyectado\n✅ Inversión: $275,800 MXN'
+                },
+                {
+                    title: '📖 Configurar mensaje diario 9 AM versículo bíblico',
+                    description: 'Cron job para enviar versículos diarios a las 9 AM',
+                    priority: 'high',
+                    status: 'completed',
+                    notes: '✅ Cron configurado\n✅ Primer mensaje enviado'
+                }
+            ];
+
+            for (const task of initialTasks) {
+                try {
+                    await fetch(`${API_URL}/api/tasks`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${API_KEY}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(task)
+                    });
+                } catch (e) {
+                    console.error('Error seeding task:', e);
+                }
+            }
+            
+            // Reload tasks
+            const response = await fetch(`${API_URL}/api/tasks`, {
+                headers: { 'Authorization': `Bearer ${API_KEY}` }
+            });
+            const data = await response.json();
+            tasks = data.data || [];
+        }
+
+        // Create new task
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const taskData = {
+                title: document.getElementById('taskTitle').value,
+                description: document.getElementById('taskDescription').value,
+                priority: document.getElementById('taskPriority').value,
+                deadline: document.getElementById('taskDeadline').value || null,
+                status: 'pending',
+                notes: ''
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/api/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(taskData)
+                });
+
+                if (response.ok) {
+                    document.getElementById('taskForm').reset();
+                    loadTasks(); // Reload to show new task
+                } else {
+                    throw new Error('Failed to create task');
+                }
+            } catch (error) {
+                console.error('Error creating task:', error);
+                // Fallback to localStorage
+                saveToLocalStorage(taskData);
+            }
+        });
+
+        // Update task status
+        window.updateStatus = async (id, newStatus) => {
+            try {
+                const response = await fetch(`${API_URL}/api/tasks/${id}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (response.ok) {
+                    loadTasks();
+                } else {
+                    throw new Error('Failed to update status');
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+                // Update locally
+                const task = tasks.find(t => t.id === id);
+                if (task) {
+                    task.status = newStatus;
+                    saveTasksToLocalStorage();
+                    renderTasks();
+                }
+            }
+        };
+
+        // Add notes to task
+        window.addNotes = async (id) => {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            
+            const notes = prompt('Agregar notas:', task.notes || '');
+            if (notes === null) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/tasks/${id}/notes`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ notes })
+                });
+
+                if (response.ok) {
+                    loadTasks();
+                } else {
+                    throw new Error('Failed to add notes');
+                }
+            } catch (error) {
+                console.error('Error adding notes:', error);
+                task.notes = notes;
+                saveTasksToLocalStorage();
+                renderTasks();
+            }
+        };
+
+        // Delete task
+        window.deleteTask = async (id) => {
+            if (!confirm('¿Eliminar esta tarea?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/tasks/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+
+                if (response.ok) {
+                    loadTasks();
+                } else {
+                    throw new Error('Failed to delete task');
+                }
+            } catch (error) {
+                console.error('Error deleting task:', error);
+                tasks = tasks.filter(t => t.id !== id);
+                saveTasksToLocalStorage();
+                renderTasks();
+            }
+        };
+
+        function renderTasks() {
+            const pending = tasks.filter(t => t.status === 'pending');
+            const progress = tasks.filter(t => t.status === 'progress');
+            const completed = tasks.filter(t => t.status === 'completed');
+
+            document.getElementById('list-pending').innerHTML = pending.map(task => renderCard(task)).join('') || '<div style="text-align:center;color:#666;padding:20px;">Sin tareas pendientes</div>';
+            document.getElementById('list-progress').innerHTML = progress.map(task => renderCard(task)).join('') || '<div style="text-align:center;color:#666;padding:20px;">Sin tareas en progreso</div>';
+            document.getElementById('list-completed').innerHTML = completed.map(task => renderCard(task)).join('') || '<div style="text-align:center;color:#666;padding:20px;">Sin tareas completadas</div>';
+
+            document.getElementById('count-pending').textContent = pending.length;
+            document.getElementById('count-progress').textContent = progress.length;
+            document.getElementById('count-completed').textContent = completed.length;
+
+            document.getElementById('pendingCount').textContent = pending.length;
+            document.getElementById('progressCount').textContent = progress.length;
+            document.getElementById('completedCount').textContent = completed.length;
+            document.getElementById('totalCount').textContent = tasks.length;
+        }
+
+        function renderCard(task) {
+            let actions = '';
+            if (task.status === 'pending') {
+                actions = `<button class="btn btn-warning" onclick="updateStatus('${task.id}', 'progress')"><i class="fas fa-play"></i> Iniciar</button>`;
+            } else if (task.status === 'progress') {
+                actions = `<button class="btn btn-success" onclick="updateStatus('${task.id}', 'completed')"><i class="fas fa-check"></i> Completar</button>`;
+            }
+
+            return `
+                <div class="task-card">
+                    <div class="task-header">
+                        <span class="task-title">${escapeHtml(task.title)}</span>
+                        <span class="task-priority priority-${task.priority}">${task.priority}</span>
+                    </div>
+                    <p class="task-description">${escapeHtml(task.description)}</p>
+                    ${task.notes ? `<div class="task-notes">${escapeHtml(task.notes)}</div>` : ''}
+                    <div class="task-actions">
+                        ${actions}
+                        <button class="btn btn-info" onclick="addNotes('${task.id}')"><i class="fas fa-edit"></i> Notas</button>
+                        <button class="btn btn-danger" onclick="deleteTask('${task.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // LocalStorage fallback functions
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('geneTasksBackup');
+            if (saved) {
+                tasks = JSON.parse(saved);
+                renderTasks();
+            }
+        }
+
+        function saveToLocalStorage(task) {
+            const saved = localStorage.getItem('geneTasksBackup');
+            const localTasks = saved ? JSON.parse(saved) : [];
+            task.id = 'local-' + Date.now();
+            localTasks.push(task);
+            localStorage.setItem('geneTasksBackup', JSON.stringify(localTasks));
+            tasks = localTasks;
+            renderTasks();
+        }
+
+        function saveTasksToLocalStorage() {
+            localStorage.setItem('geneTasksBackup', JSON.stringify(tasks));
+        }
+
+        // Initialize
+        checkConnection();
+    </script>
+</body>
+</html>
