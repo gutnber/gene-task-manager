@@ -314,113 +314,179 @@
     </div>
 
     <script>
-        // Seed data with migrated tasks
-        const seedTasks = [
-            {
-                id: 'task-001',
-                title: '🎨 Mejorar diseño visual de ProTask con estilo Kanban',
-                description: 'Ir mejorando cómo se ven las tareas de ProTask, quizás haciendo un Kanban orientado al flujo de trabajo',
-                priority: 'high',
-                status: 'completed',
-                notes: '✅ Implementado tablero Kanban con 3 columnas\n✅ Diseño moderno tipo Trello\n✅ Asignación de tareas (Tú/Genee)',
-                createdAt: '2026-02-15T09:09:00Z',
-                updatedAt: '2026-02-15T16:00:00Z'
-            },
-            {
-                id: 'task-002',
-                title: '📊 Crear Plan de Negocios para Serviclima El Muñoz',
-                description: 'Plan de negocios profesional para presentar a inversionistas. Incluye proyecciones financieras, análisis de mercado, ROI y estructura de participación.',
-                priority: 'high',
-                status: 'completed',
-                notes: '✅ Plan de negocios completo creado\n✅ Proyecciones financieras 3 años\n✅ Inversión total: $275,800 MXN\n✅ ROI Año 1: 46.4%\n✅ Repositorio: github.com/gutnber/serviclima-plan-negocios',
-                createdAt: '2026-02-15T07:15:00Z',
-                updatedAt: '2026-02-15T08:30:00Z'
-            },
-            {
-                id: 'task-003',
-                title: '📖 Configurar mensaje diario 9 AM con versículo bíblico',
-                description: 'Configurar cron job para enviar mensaje diario a las 9 AM con versículo bíblico y reflexión a Alex vía WhatsApp',
-                priority: 'high',
-                status: 'completed',
-                notes: '✅ Configurado cron job\n✅ Primer mensaje enviado exitosamente (Proverbios 3:5-6)\n✅ Horario: 9:00 AM America/Mexico_City',
-                createdAt: '2026-02-15T02:09:00Z',
-                updatedAt: '2026-02-15T09:00:00Z'
-            },
-            {
-                id: 'task-004',
-                title: '🤖 Crear Gene Task Manager - App de gestión de tareas',
-                description: 'App para gestionar tareas asignadas a Genee con historial y seguimiento',
-                priority: 'high',
-                status: 'completed',
-                notes: '✅ App creada con diseño profesional Kanban\n✅ Tareas migradas exitosamente\n✅ Persistencia localStorage activada',
-                createdAt: '2026-02-14T23:23:00Z',
-                updatedAt: '2026-02-15T16:30:00Z'
-            }
-        ];
-
-        const STORAGE_KEY = 'geneTasksDB_v2';
+        // Conexión a Inforge Backend - Proyecto "Claw"
+        const API_URL = 'https://y2n6p84h.us-west.insforge.app';
+        const API_KEY = 'ik_72fafd3166776475d0349c9ea76ae22c';
+        
         let tasks = [];
+        let isConnected = false;
 
-        function initStorage() {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (!saved) {
-                tasks = [...seedTasks];
-                saveTasks();
-            } else {
-                tasks = JSON.parse(saved);
+        // Verificar conexión a Inforge
+        async function checkConnection() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (response.ok) {
+                    isConnected = true;
+                    loadTasks();
+                } else {
+                    throw new Error('No connection');
+                }
+            } catch (error) {
+                console.log('Usando localStorage como fallback');
+                loadFromLocalStorage();
             }
         }
 
-        function saveTasks() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        // Cargar tareas desde Inforge
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_URL}/api/tasks`, {
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    tasks = data.data || [];
+                    renderTasks();
+                } else {
+                    throw new Error('Failed to load');
+                }
+            } catch (error) {
+                loadFromLocalStorage();
+            }
         }
 
-        document.getElementById('taskForm').addEventListener('submit', (e) => {
+        // Cargar desde localStorage (fallback)
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('geneTasksBackup');
+            tasks = saved ? JSON.parse(saved) : [];
+            renderTasks();
+        }
+
+        // Guardar en localStorage (backup)
+        function saveToLocalStorage() {
+            localStorage.setItem('geneTasksBackup', JSON.stringify(tasks));
+        }
+
+        // Crear nueva tarea
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const newTask = {
-                id: 'task-' + Date.now(),
                 title: document.getElementById('taskTitle').value,
                 description: document.getElementById('taskDescription').value,
                 priority: document.getElementById('taskPriority').value,
                 deadline: document.getElementById('taskDeadline').value || null,
                 status: 'pending',
-                notes: '',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                notes: ''
             };
-            tasks.unshift(newTask);
-            saveTasks();
-            renderTasks();
-            document.getElementById('taskForm').reset();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/tasks`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(newTask)
+                });
+                
+                if (response.ok) {
+                    document.getElementById('taskForm').reset();
+                    loadTasks();
+                } else {
+                    throw new Error('Failed to create');
+                }
+            } catch (error) {
+                // Fallback a localStorage
+                newTask.id = 'local-' + Date.now();
+                newTask.createdAt = new Date().toISOString();
+                newTask.updatedAt = new Date().toISOString();
+                tasks.unshift(newTask);
+                saveToLocalStorage();
+                renderTasks();
+                document.getElementById('taskForm').reset();
+            }
         });
 
-        window.updateStatus = (id, newStatus) => {
-            const task = tasks.find(t => t.id === id);
-            if (task) {
-                task.status = newStatus;
-                task.updatedAt = new Date().toISOString();
-                saveTasks();
-                renderTasks();
-            }
-        };
-
-        window.addNotes = (id) => {
-            const task = tasks.find(t => t.id === id);
-            if (task) {
-                const notes = prompt('Agregar notas:', task.notes || '');
-                if (notes !== null) {
-                    task.notes = notes;
+        // Actualizar estado
+        window.updateStatus = async (id, newStatus) => {
+            try {
+                const response = await fetch(`${API_URL}/api/tasks/${id}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    loadTasks();
+                } else {
+                    throw new Error('Failed to update');
+                }
+            } catch (error) {
+                // Fallback local
+                const task = tasks.find(t => t.id === id);
+                if (task) {
+                    task.status = newStatus;
                     task.updatedAt = new Date().toISOString();
-                    saveTasks();
+                    saveToLocalStorage();
                     renderTasks();
                 }
             }
         };
 
-        window.deleteTask = (id) => {
-            if (confirm('¿Eliminar esta tarea permanentemente?')) {
+        // Agregar notas
+        window.addNotes = async (id) => {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+            
+            const notes = prompt('Agregar notas:', task.notes || '');
+            if (notes === null) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/tasks/${id}/notes`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ notes })
+                });
+                
+                if (response.ok) {
+                    loadTasks();
+                } else {
+                    throw new Error('Failed to add notes');
+                }
+            } catch (error) {
+                // Fallback local
+                task.notes = notes;
+                task.updatedAt = new Date().toISOString();
+                saveToLocalStorage();
+                renderTasks();
+            }
+        };
+
+        // Eliminar tarea
+        window.deleteTask = async (id) => {
+            if (!confirm('¿Eliminar esta tarea?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/tasks/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+                
+                if (response.ok) {
+                    loadTasks();
+                } else {
+                    throw new Error('Failed to delete');
+                }
+            } catch (error) {
+                // Fallback local
                 tasks = tasks.filter(t => t.id !== id);
-                saveTasks();
+                saveToLocalStorage();
                 renderTasks();
             }
         };
@@ -475,8 +541,8 @@
             return div.innerHTML;
         }
 
-        initStorage();
-        renderTasks();
+        // Iniciar
+        checkConnection();
     </script>
 </body>
 </html>
