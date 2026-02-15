@@ -4,61 +4,269 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gene Task Manager</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; color: #e0e0e0; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header { text-align: center; padding: 40px 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px; }
-        .logo { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 10px; }
-        .logo i { font-size: 2.5rem; color: #00d4ff; }
-        h1 { font-size: 2.5rem; background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .subtitle { color: #888; font-size: 1rem; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
-        .stat-card i { font-size: 2rem; margin-bottom: 10px; color: #00d4ff; }
+        :root {
+            --primary: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .logo i {
+            font-size: 2.5rem;
+            color: #00d4ff;
+        }
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 1rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        .stat-card i { font-size: 2rem; margin-bottom: 10px; }
+        .stat-card.pending i { color: var(--warning); }
+        .stat-card.progress i { color: var(--info); }
+        .stat-card.completed i { color: var(--success); }
+        .stat-card.total i { color: #7b2cbf; }
         .stat-value { font-size: 2.5rem; font-weight: 700; color: #fff; }
         .stat-label { color: #888; font-size: 0.9rem; }
-        .task-form { background: rgba(255,255,255,0.05); border-radius: 20px; padding: 30px; margin-bottom: 30px; }
-        .form-title { color: #00d4ff; margin-bottom: 20px; }
-        input, textarea, select { width: 100%; padding: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; color: #fff; margin-bottom: 15px; }
-        .btn { padding: 15px 30px; background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; }
-        .btn:hover { transform: translateY(-2px); }
-        .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .filter-btn { padding: 10px 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 25px; color: #888; cursor: pointer; }
-        .filter-btn.active { background: rgba(0, 212, 255, 0.2); color: #00d4ff; border-color: #00d4ff; }
-        .task-list { display: flex; flex-direction: column; gap: 15px; }
-        .task-card { background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .task-title { font-size: 1.2rem; font-weight: 600; }
-        .task-priority { padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+
+        /* KANBAN BOARD */
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .kanban-column {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 500px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+        .column-title { font-weight: 600; display: flex; align-items: center; gap: 10px; font-size: 1.1rem; }
+        .column-pending .column-title { color: var(--warning); }
+        .column-progress .column-title { color: var(--info); }
+        .column-completed .column-title { color: var(--success); }
+        .column-count {
+            background: rgba(255,255,255,0.1);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        /* TASK CARDS */
+        .task-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        .task-card:hover {
+            border-color: rgba(0, 212, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .task-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.4;
+        }
+        .task-priority {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
         .priority-high { background: rgba(255, 0, 0, 0.2); color: #ff4444; }
         .priority-medium { background: rgba(255, 165, 0, 0.2); color: #ffa500; }
         .priority-low { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
-        .task-actions { display: flex; gap: 10px; margin-top: 15px; }
-        .btn-small { padding: 8px 16px; font-size: 0.85rem; }
-        .btn-success { background: rgba(0, 255, 136, 0.2); color: #00ff88; border: 1px solid #00ff88; }
-        .btn-warning { background: rgba(255, 165, 0, 0.2); color: #ffa500; border: 1px solid #ffa500; }
-        .btn-danger { background: rgba(255, 0, 0, 0.2); color: #ff4444; border: 1px solid #ff4444; }
-        .sync-indicator { position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; background: rgba(0, 0, 0, 0.8); border-radius: 25px; }
-        .sync-indicator.synced { color: #00ff88; }
-        .sync-indicator.syncing { color: #ffa500; }
-        .sync-indicator.error { color: #ff4444; }
+        .task-description {
+            color: #aaa;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .task-notes {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.85rem;
+            color: #888;
+            white-space: pre-line;
+            border-left: 3px solid #00d4ff;
+        }
+        .task-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+        }
+        .btn-success {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border: 1px solid #00ff88;
+        }
+        .btn-warning {
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+            border: 1px solid #ffa500;
+        }
+        .btn-danger {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff4444;
+            border: 1px solid #ff4444;
+        }
+        .btn-info {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+            border: 1px solid #00d4ff;
+        }
+
+        /* ADD TASK FORM */
+        .task-form {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .form-title {
+            color: #00d4ff;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            color: #fff;
+            margin-bottom: 15px;
+            font-family: inherit;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+        .btn-primary {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        @media (max-width: 968px) {
+            .kanban-board { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <div class="logo"><i class="fas fa-robot"></i><h1>Gene Task Manager</h1></div>
+            <div class="logo">
+                <i class="fas fa-robot"></i>
+                <h1>Gene Task Manager</h1>
+            </div>
             <p class="subtitle">Gestión de tareas para Genee - Tu agente de desarrollo</p>
         </header>
 
         <div class="stats-grid">
-            <div class="stat-card"><i class="fas fa-clock"></i><div class="stat-value" id="pendingCount">0</div><div class="stat-label">Pendientes</div></div>
-            <div class="stat-card"><i class="fas fa-spinner"></i><div class="stat-value" id="progressCount">0</div><div class="stat-label">En Progreso</div></div>
-            <div class="stat-card"><i class="fas fa-check-circle"></i><div class="stat-value" id="completedCount">0</div><div class="stat-label">Completadas</div></div>
-            <div class="stat-card"><i class="fas fa-tasks"></i><div class="stat-value" id="totalCount">0</div><div class="stat-label">Total</div></div>
+            <div class="stat-card pending">
+                <i class="fas fa-clock"></i>
+                <div class="stat-value" id="pendingCount">0</div>
+                <div class="stat-label">Pendientes</div>
+            </div>
+            <div class="stat-card progress">
+                <i class="fas fa-spinner"></i>
+                <div class="stat-value" id="progressCount">0</div>
+                <div class="stat-label">En Progreso</div>
+            </div>
+            <div class="stat-card completed">
+                <i class="fas fa-check-circle"></i>
+                <div class="stat-value" id="completedCount">0</div>
+                <div class="stat-label">Completadas</div>
+            </div>
+            <div class="stat-card total">
+                <i class="fas fa-tasks"></i>
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">Total</div>
+            </div>
         </div>
 
         <div class="task-form">
@@ -66,82 +274,111 @@
             <form id="taskForm">
                 <input type="text" id="taskTitle" placeholder="Título de la tarea" required>
                 <textarea id="taskDescription" placeholder="Descripción detallada..." rows="4" required></textarea>
-                <select id="taskPriority">
-                    <option value="high">Alta</option>
-                    <option value="medium" selected>Media</option>
-                    <option value="low">Baja</option>
-                </select>
-                <input type="date" id="taskDeadline">
-                <button type="submit" class="btn"><i class="fas fa-paper-plane"></i> Asignar a Genee</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <select id="taskPriority">
+                        <option value="high">Alta Prioridad</option>
+                        <option value="medium" selected>Media Prioridad</option>
+                        <option value="low">Baja Prioridad</option>
+                    </select>
+                    <input type="date" id="taskDeadline">
+                </div>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-paper-plane"></i> Asignar a Genee
+                </button>
             </form>
         </div>
 
-        <div class="filters">
-            <button class="filter-btn active" data-filter="all">Todas</button>
-            <button class="filter-btn" data-filter="pending">Pendientes</button>
-            <button class="filter-btn" data-filter="progress">En Progreso</button>
-            <button class="filter-btn" data-filter="completed">Completadas</button>
+        <div class="kanban-board">
+            <div class="kanban-column column-pending">
+                <div class="column-header">
+                    <span class="column-title"><i class="fas fa-clock"></i> Pendientes</span>
+                    <span class="column-count" id="count-pending">0</span>
+                </div>
+                <div id="list-pending"></div>
+            </div>
+            <div class="kanban-column column-progress">
+                <div class="column-header">
+                    <span class="column-title"><i class="fas fa-spinner"></i> En Progreso</span>
+                    <span class="column-count" id="count-progress">0</span>
+                </div>
+                <div id="list-progress"></div>
+            </div>
+            <div class="kanban-column column-completed">
+                <div class="column-header">
+                    <span class="column-title"><i class="fas fa-check-circle"></i> Completadas</span>
+                    <span class="column-count" id="count-completed">0</span>
+                </div>
+                <div id="list-completed"></div>
+            </div>
         </div>
-
-        <div id="taskList" class="task-list"></div>
-
-        <div class="sync-indicator synced" id="syncStatus"><i class="fas fa-check-circle"></i> <span>Firebase Connected</span></div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+    <script>
+        // Seed data with migrated tasks
+        const seedTasks = [
+            {
+                id: 'task-001',
+                title: '🎨 Mejorar diseño visual de ProTask con estilo Kanban',
+                description: 'Ir mejorando cómo se ven las tareas de ProTask, quizás haciendo un Kanban orientado al flujo de trabajo',
+                priority: 'high',
+                status: 'completed',
+                notes: '✅ Implementado tablero Kanban con 3 columnas\n✅ Diseño moderno tipo Trello\n✅ Asignación de tareas (Tú/Genee)',
+                createdAt: '2026-02-15T09:09:00Z',
+                updatedAt: '2026-02-15T16:00:00Z'
+            },
+            {
+                id: 'task-002',
+                title: '📊 Crear Plan de Negocios para Serviclima El Muñoz',
+                description: 'Plan de negocios profesional para presentar a inversionistas. Incluye proyecciones financieras, análisis de mercado, ROI y estructura de participación.',
+                priority: 'high',
+                status: 'completed',
+                notes: '✅ Plan de negocios completo creado\n✅ Proyecciones financieras 3 años\n✅ Inversión total: $275,800 MXN\n✅ ROI Año 1: 46.4%\n✅ Repositorio: github.com/gutnber/serviclima-plan-negocios',
+                createdAt: '2026-02-15T07:15:00Z',
+                updatedAt: '2026-02-15T08:30:00Z'
+            },
+            {
+                id: 'task-003',
+                title: '📖 Configurar mensaje diario 9 AM con versículo bíblico',
+                description: 'Configurar cron job para enviar mensaje diario a las 9 AM con versículo bíblico y reflexión a Alex vía WhatsApp',
+                priority: 'high',
+                status: 'completed',
+                notes: '✅ Configurado cron job\n✅ Primer mensaje enviado exitosamente (Proverbios 3:5-6)\n✅ Horario: 9:00 AM America/Mexico_City',
+                createdAt: '2026-02-15T02:09:00Z',
+                updatedAt: '2026-02-15T09:00:00Z'
+            },
+            {
+                id: 'task-004',
+                title: '🤖 Crear Gene Task Manager - App de gestión de tareas',
+                description: 'App para gestionar tareas asignadas a Genee con historial y seguimiento',
+                priority: 'high',
+                status: 'completed',
+                notes: '✅ App creada con diseño profesional Kanban\n✅ Tareas migradas exitosamente\n✅ Persistencia localStorage activada',
+                createdAt: '2026-02-14T23:23:00Z',
+                updatedAt: '2026-02-15T16:30:00Z'
+            }
+        ];
 
-        // Firebase config - usando el proyecto de ProTask
-        const firebaseConfig = {
-            apiKey: "AIzaSyASHwbzH0SGzzXsDicXKVGNsIBessMufUc",
-            authDomain: "nano-banana-pro.firebaseapp.com",
-            projectId: "nano-banana-pro",
-            storageBucket: "nano-banana-pro.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const tasksCollection = collection(db, 'geneTasks');
-
+        const STORAGE_KEY = 'geneTasksDB_v2';
         let tasks = [];
-        let currentFilter = 'all';
 
-        document.addEventListener('DOMContentLoaded', () => {
-            loadTasks();
-            setupEventListeners();
-        });
-
-        function setupEventListeners() {
-            document.getElementById('taskForm').addEventListener('submit', addTask);
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    currentFilter = btn.dataset.filter;
-                    renderTasks();
-                });
-            });
+        function initStorage() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (!saved) {
+                tasks = [...seedTasks];
+                saveTasks();
+            } else {
+                tasks = JSON.parse(saved);
+            }
         }
 
-        function loadTasks() {
-            setSyncStatus('syncing');
-            const q = query(tasksCollection, orderBy('createdAt', 'desc'));
-            onSnapshot(q, (snapshot) => {
-                tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderTasks();
-                setSyncStatus('synced');
-            }, (error) => {
-                console.error('Error:', error);
-                setSyncStatus('error');
-            });
+        function saveTasks() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
         }
 
-        async function addTask(e) {
+        document.getElementById('taskForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const taskData = {
+            const newTask = {
+                id: 'task-' + Date.now(),
                 title: document.getElementById('taskTitle').value,
                 description: document.getElementById('taskDescription').value,
                 priority: document.getElementById('taskPriority').value,
@@ -151,98 +388,85 @@
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
-            try {
-                await addDoc(tasksCollection, taskData);
-                document.getElementById('taskForm').reset();
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }
+            tasks.unshift(newTask);
+            saveTasks();
+            renderTasks();
+            document.getElementById('taskForm').reset();
+        });
 
-        async function updateStatus(id, newStatus) {
-            try {
-                await updateDoc(doc(db, 'geneTasks', id), { 
-                    status: newStatus, 
-                    updatedAt: new Date().toISOString() 
-                });
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }
-
-        async function addNotes(id, notes) {
-            try {
-                await updateDoc(doc(db, 'geneTasks', id), { 
-                    notes, 
-                    updatedAt: new Date().toISOString() 
-                });
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }
-
-        async function deleteTask(id) {
-            if (confirm('¿Eliminar esta tarea?')) {
-                try {
-                    await deleteDoc(doc(db, 'geneTasks', id));
-                } catch (error) {
-                    console.error('Error:', error);
-                }
-            }
-        }
-
-        function promptNotes(id) {
+        window.updateStatus = (id, newStatus) => {
             const task = tasks.find(t => t.id === id);
             if (task) {
-                const notes = prompt('Notas:', task.notes || '');
-                if (notes !== null) addNotes(id, notes);
+                task.status = newStatus;
+                task.updatedAt = new Date().toISOString();
+                saveTasks();
+                renderTasks();
             }
-        }
+        };
+
+        window.addNotes = (id) => {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                const notes = prompt('Agregar notas:', task.notes || '');
+                if (notes !== null) {
+                    task.notes = notes;
+                    task.updatedAt = new Date().toISOString();
+                    saveTasks();
+                    renderTasks();
+                }
+            }
+        };
+
+        window.deleteTask = (id) => {
+            if (confirm('¿Eliminar esta tarea permanentemente?')) {
+                tasks = tasks.filter(t => t.id !== id);
+                saveTasks();
+                renderTasks();
+            }
+        };
 
         function renderTasks() {
-            let filtered = currentFilter === 'all' ? tasks : tasks.filter(t => t.status === currentFilter);
-            const container = document.getElementById('taskList');
-            if (filtered.length === 0) {
-                container.innerHTML = '<div style="text-align:center;padding:40px;color:#666;"><i class="fas fa-clipboard-list" style="font-size:3rem;margin-bottom:15px;display:block;"></i>No hay tareas</div>';
-                return;
+            const pending = tasks.filter(t => t.status === 'pending');
+            const progress = tasks.filter(t => t.status === 'progress');
+            const completed = tasks.filter(t => t.status === 'completed');
+
+            document.getElementById('list-pending').innerHTML = pending.map(task => renderCard(task)).join('');
+            document.getElementById('list-progress').innerHTML = progress.map(task => renderCard(task)).join('');
+            document.getElementById('list-completed').innerHTML = completed.map(task => renderCard(task)).join('');
+
+            document.getElementById('count-pending').textContent = pending.length;
+            document.getElementById('count-progress').textContent = progress.length;
+            document.getElementById('count-completed').textContent = completed.length;
+
+            document.getElementById('pendingCount').textContent = pending.length;
+            document.getElementById('progressCount').textContent = progress.length;
+            document.getElementById('completedCount').textContent = completed.length;
+            document.getElementById('totalCount').textContent = tasks.length;
+        }
+
+        function renderCard(task) {
+            let actions = '';
+            if (task.status === 'pending') {
+                actions = `<button class="btn btn-warning" onclick="updateStatus('${task.id}', 'progress')"><i class="fas fa-play"></i> Iniciar</button>`;
+            } else if (task.status === 'progress') {
+                actions = `<button class="btn btn-success" onclick="updateStatus('${task.id}', 'completed')"><i class="fas fa-check"></i> Completar</button>`;
             }
-            container.innerHTML = filtered.map(task => `
+
+            return `
                 <div class="task-card">
                     <div class="task-header">
-                        <h3 class="task-title">${escapeHtml(task.title)}</h3>
+                        <span class="task-title">${escapeHtml(task.title)}</span>
                         <span class="task-priority priority-${task.priority}">${task.priority}</span>
                     </div>
-                    <p style="color:#aaa;margin-bottom:10px;">${escapeHtml(task.description)}</p>
-                    <div style="color:#666;font-size:0.85rem;margin-bottom:10px;">
-                        <i class="fas fa-calendar"></i> ${new Date(task.createdAt).toLocaleDateString()}
-                        ${task.deadline ? ` | <i class="fas fa-clock"></i> ${new Date(task.deadline).toLocaleDateString()}` : ''}
-                        | <span style="color:${getStatusColor(task.status)}"><i class="fas fa-${getStatusIcon(task.status)}"></i> ${getStatusLabel(task.status)}</span>
-                    </div>
-                    ${task.notes ? `<div style="background:rgba(0,212,255,0.1);padding:10px;border-radius:8px;margin-bottom:10px;"><strong style="color:#00d4ff;">Notas:</strong> ${escapeHtml(task.notes)}</div>` : ''}
+                    <p class="task-description">${escapeHtml(task.description)}</p>
+                    ${task.notes ? `<div class="task-notes">${escapeHtml(task.notes)}</div>` : ''}
                     <div class="task-actions">
-                        ${task.status === 'pending' ? `<button class="btn btn-warning btn-small" onclick="updateStatus('${task.id}', 'progress')"><i class="fas fa-play"></i> Iniciar</button>` : ''}
-                        ${task.status === 'progress' ? `<button class="btn btn-success btn-small" onclick="updateStatus('${task.id}', 'completed')"><i class="fas fa-check"></i> Completar</button>` : ''}
-                        <button class="btn btn-small" onclick="promptNotes('${task.id}')" style="background:rgba(0,212,255,0.2);color:#00d4ff;border:1px solid #00d4ff;"><i class="fas fa-edit"></i> Notas</button>
-                        <button class="btn btn-danger btn-small" onclick="deleteTask('${task.id}')"><i class="fas fa-trash"></i></button>
+                        ${actions}
+                        <button class="btn btn-info" onclick="addNotes('${task.id}')"><i class="fas fa-edit"></i> Notas</button>
+                        <button class="btn btn-danger" onclick="deleteTask('${task.id}')"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
-            `).join('');
-            updateStats();
-        }
-
-        function updateStats() {
-            document.getElementById('totalCount').textContent = tasks.length;
-            document.getElementById('pendingCount').textContent = tasks.filter(t => t.status === 'pending').length;
-            document.getElementById('progressCount').textContent = tasks.filter(t => t.status === 'progress').length;
-            document.getElementById('completedCount').textContent = tasks.filter(t => t.status === 'completed').length;
-        }
-
-        function setSyncStatus(status) {
-            const el = document.getElementById('syncStatus');
-            el.className = 'sync-indicator ' + status;
-            const icons = { synced: 'check-circle', syncing: 'spinner fa-spin', error: 'exclamation-circle' };
-            const texts = { synced: 'Firebase Connected', syncing: 'Syncing...', error: 'Error' };
-            el.innerHTML = `<i class="fas fa-${icons[status]}"></i> <span>${texts[status]}</span>`;
+            `;
         }
 
         function escapeHtml(text) {
@@ -251,26 +475,8 @@
             return div.innerHTML;
         }
 
-        function getStatusColor(status) {
-            const colors = { pending: '#ffa500', progress: '#00d4ff', completed: '#00ff88', cancelled: '#ff4444' };
-            return colors[status] || '#888';
-        }
-
-        function getStatusIcon(status) {
-            const icons = { pending: 'clock', progress: 'spinner', completed: 'check-circle', cancelled: 'times-circle' };
-            return icons[status] || 'circle';
-        }
-
-        function getStatusLabel(status) {
-            const labels = { pending: 'Pendiente', progress: 'En Progreso', completed: 'Completada', cancelled: 'Cancelada' };
-            return labels[status] || status;
-        }
-
-        // Exponer funciones globalmente
-        window.updateStatus = updateStatus;
-        window.addNotes = addNotes;
-        window.deleteTask = deleteTask;
-        window.promptNotes = promptNotes;
+        initStorage();
+        renderTasks();
     </script>
 </body>
 </html>
